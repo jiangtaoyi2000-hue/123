@@ -1,0 +1,25 @@
+; ------------------------------------------------------------------
+; 中望CAD 自动加载脚本 (LISP)
+; 使用方法:
+;   1. 将编译好的 ZwCadWordToPng.dll 以及 PdfiumViewer.dll / pdfium.dll
+;      放到同一个目录 (例如 D:\Plugins\ZwCadWordToPng\).
+;   2. 修改下面 DLL_PATH 为该 dll 的绝对路径.
+;   3. 在中望CAD 中执行: (load "D:/Plugins/ZwCadWordToPng/ZwCadWordToPng.ldr")
+;      或者把这条 load 语句加进 acad.lsp / acaddoc.lsp 实现自动加载.
+;   4. 载入成功后在命令行输入 WORD2PNG 即可.
+; ------------------------------------------------------------------
+
+(defun C:LOAD-WORD2PNG ( / dllPath)
+  (setq dllPath "D:/Plugins/ZwCadWordToPng/ZwCadWordToPng.dll")
+  (if (findfile dllPath)
+    (progn
+      (command "._NETLOAD" dllPath)
+      (princ "\n[Word2Png] 插件加载完成, 输入 WORD2PNG 使用.")
+    )
+    (princ (strcat "\n[Word2Png] 未找到 dll: " dllPath))
+  )
+  (princ)
+)
+
+; 启动时自动加载
+(C:LOAD-WORD2PNG)
