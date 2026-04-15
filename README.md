@@ -28,20 +28,50 @@
    当前图纸 (模型空间)
 ```
 
+## 两种交付形态
+
+| 形态 | 适用场景 | 位置 |
+|------|----------|------|
+| **C# .NET 插件** (DLL) | 希望深度集成、走 RasterImage API、机器上未装 PowerShell 也可用 | `src/ZwCadWordToPng/` |
+| **Visual LISP 脚本** (.lsp) | 希望免编译、放文件即用、快速分发 | `lisp/` |
+
+两种形态对外都叫 `WORD2PNG` 命令,行为一致。
+
 ## 目录结构
 
 ```
 ZwCadWordToPng.sln
 src/
-└── ZwCadWordToPng/
-    ├── ZwCadWordToPng.csproj     MSBuild 项目
-    ├── packages.config           NuGet 包清单 (PdfiumViewer / Word Interop)
+└── ZwCadWordToPng/                  形态 A: C# .NET 插件 (DLL)
+    ├── ZwCadWordToPng.csproj        MSBuild 项目
+    ├── packages.config              NuGet 包清单 (PdfiumViewer / Word Interop)
     ├── Properties/AssemblyInfo.cs
-    ├── WordToPngCommand.cs       WORD2PNG 命令入口
-    ├── WordConverter.cs          Word -> PDF -> PNG
-    ├── CadImageInserter.cs       PNG -> RasterImage 插入
-    └── ZwCadWordToPng.ldr        LISP 启动加载脚本
+    ├── WordToPngCommand.cs          WORD2PNG 命令入口
+    ├── WordConverter.cs             Word -> PDF -> PNG
+    ├── CadImageInserter.cs          PNG -> RasterImage 插入
+    └── ZwCadWordToPng.ldr           LISP 启动加载脚本
+lisp/                                形态 B: Visual LISP + PowerShell 脚本
+├── ZwCadWordToPng.lsp               WORD2PNG 命令 (前端 / 交互 / 插入)
+└── Word2Png.ps1                     后端: Word COM + CopyAsPicture -> PNG
 ```
+
+### 形态 B: Visual LISP 脚本 (免编译, 推荐快速部署)
+
+1. 把 `lisp/` 目录整体拷贝到本机任意位置,如 `D:\Plugins\ZwCadWordToPng\`。
+2. 在中望CAD命令行执行(注意路径用正斜杠):
+   ```
+   (load "D:/Plugins/ZwCadWordToPng/ZwCadWordToPng.lsp")
+   ```
+   或把这一行追加到 `acaddoc.lsp` / ZWCAD 的启动加载列表中实现自动加载。
+3. 命令行输入 `WORD2PNG`,按下方 [使用] 章节操作。
+4. **原理**:
+   - `Word2Png.ps1` 用 Word COM 打开文档,对每一页取出 `Range.CopyAsPicture` 放入剪贴板,
+     再用 `System.Windows.Forms.Clipboard.GetImage()` 取图,最后用 `System.Drawing`
+     按 DPI 重采样后存为 PNG。**不需要 PDF 库, 不需要 ImageMagick, Win10+ 开箱即用。**
+   - `ZwCadWordToPng.lsp` 通过 `WScript.Shell.Run` 同步调用上述 PS 脚本,
+     再用内置命令 `-IMAGEATTACH` 按页码顺序把 PNG 插入到模型空间,
+     自动纵向排列、按 5% 图片宽度留间隙。
+5. **日志**: 若转换异常,会在 PNG 输出目录生成 `Word2Png.log`,可查看 PowerShell 侧堆栈。
 
 ## 编译要求
 
